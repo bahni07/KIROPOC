@@ -1,18 +1,18 @@
-# AWS Lambda Setup Script for Windows
+﻿# AWS Lambda Setup Script for Windows
 # This script automates the deployment of User Registration Service to AWS Lambda
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "🚀 User Registration Service - AWS Lambda Deployment" -ForegroundColor Cyan
+Write-Host "User Registration Service - AWS Lambda Deployment" -ForegroundColor Cyan
 Write-Host "====================================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Check if AWS CLI is installed
 try {
     $null = Get-Command aws -ErrorAction Stop
-    Write-Host "✅ AWS CLI found" -ForegroundColor Green
+    Write-Host "AWS CLI found" -ForegroundColor Green
 } catch {
-    Write-Host "❌ AWS CLI is not installed" -ForegroundColor Red
+    Write-Host "AWS CLI is not installed" -ForegroundColor Red
     Write-Host "Please install it from: https://aws.amazon.com/cli/" -ForegroundColor Yellow
     exit 1
 }
@@ -21,13 +21,13 @@ try {
 Write-Host "Checking AWS credentials..." -ForegroundColor Yellow
 $awsIdentity = aws sts get-caller-identity 2>&1
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ AWS credentials not configured" -ForegroundColor Red
+    Write-Host " AWS credentials not configured" -ForegroundColor Red
     Write-Host "Please run: aws configure" -ForegroundColor Yellow
     exit 1
 }
 
 $identity = $awsIdentity | ConvertFrom-Json
-Write-Host "✅ AWS credentials configured" -ForegroundColor Green
+Write-Host "AWS credentials configured" -ForegroundColor Green
 Write-Host "   Account: $($identity.Account)" -ForegroundColor Gray
 Write-Host ""
 
@@ -56,7 +56,7 @@ function Prompt-Secret {
     return $value
 }
 
-Write-Host "📋 Step 1: Configuration" -ForegroundColor Cyan
+Write-Host " Step 1: Configuration" -ForegroundColor Cyan
 Write-Host "------------------------" -ForegroundColor Cyan
 Write-Host ""
 
@@ -67,7 +67,7 @@ $dbUsername = Prompt-WithDefault "Database username" "postgres"
 $dbPassword = Prompt-Secret "Database password (min 8 characters)"
 
 Write-Host ""
-Write-Host "🏗️  Step 2: Deploy Infrastructure" -ForegroundColor Cyan
+Write-Host "  Step 2: Deploy Infrastructure" -ForegroundColor Cyan
 Write-Host "----------------------------------" -ForegroundColor Cyan
 Write-Host ""
 
@@ -88,26 +88,26 @@ aws cloudformation create-stack `
     --region $region
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Failed to create stack" -ForegroundColor Red
+    Write-Host " Failed to create stack" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "⏳ Waiting for stack creation..." -ForegroundColor Yellow
+Write-Host " Waiting for stack creation..." -ForegroundColor Yellow
 aws cloudformation wait stack-create-complete `
     --stack-name $stackName `
     --region $region
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Stack creation failed" -ForegroundColor Red
+    Write-Host " Stack creation failed" -ForegroundColor Red
     Write-Host "Check AWS Console: https://console.aws.amazon.com/cloudformation/" -ForegroundColor Yellow
     exit 1
 }
 
-Write-Host "✅ Infrastructure deployed successfully" -ForegroundColor Green
+Write-Host " Infrastructure deployed successfully" -ForegroundColor Green
 Write-Host ""
 
 # Get stack outputs
-Write-Host "📊 Getting stack outputs..." -ForegroundColor Yellow
+Write-Host " Getting stack outputs..." -ForegroundColor Yellow
 $outputs = aws cloudformation describe-stacks `
     --stack-name $stackName `
     --region $region `
@@ -118,10 +118,10 @@ $lambdaArn = ($outputs | Where-Object { $_.OutputKey -eq "LambdaFunctionArn" }).
 $deploymentBucket = ($outputs | Where-Object { $_.OutputKey -eq "DeploymentBucketName" }).OutputValue
 $dbEndpoint = ($outputs | Where-Object { $_.OutputKey -eq "DatabaseEndpoint" }).OutputValue
 
-Write-Host "✅ Stack outputs retrieved" -ForegroundColor Green
+Write-Host " Stack outputs retrieved" -ForegroundColor Green
 Write-Host ""
 
-Write-Host "🔐 Step 3: Configure Application Secrets" -ForegroundColor Cyan
+Write-Host " Step 3: Configure Application Secrets" -ForegroundColor Cyan
 Write-Host "----------------------------------------" -ForegroundColor Cyan
 Write-Host ""
 
@@ -152,13 +152,13 @@ aws secretsmanager update-secret `
     --region $region
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Secrets updated successfully" -ForegroundColor Green
+    Write-Host " Secrets updated successfully" -ForegroundColor Green
 } else {
-    Write-Host "⚠️  Failed to update secrets" -ForegroundColor Yellow
+    Write-Host "  Failed to update secrets" -ForegroundColor Yellow
 }
 Write-Host ""
 
-Write-Host "📦 Step 4: Build Lambda Package" -ForegroundColor Cyan
+Write-Host " Step 4: Build Lambda Package" -ForegroundColor Cyan
 Write-Host "-------------------------------" -ForegroundColor Cyan
 Write-Host ""
 
@@ -166,14 +166,14 @@ Write-Host "Building JAR with Maven..." -ForegroundColor Yellow
 & "C:\Users\CAESAR\Downloads\apache-maven-3.9.12-bin\apache-maven-3.9.12\bin\mvn.cmd" clean package -DskipTests
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Failed to build JAR" -ForegroundColor Red
+    Write-Host " Failed to build JAR" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "✅ JAR built successfully" -ForegroundColor Green
+Write-Host " JAR built successfully" -ForegroundColor Green
 Write-Host ""
 
-Write-Host "☁️  Step 5: Upload to S3 and Deploy" -ForegroundColor Cyan
+Write-Host "  Step 5: Upload to S3 and Deploy" -ForegroundColor Cyan
 Write-Host "-----------------------------------" -ForegroundColor Cyan
 Write-Host ""
 
@@ -183,7 +183,7 @@ aws s3 cp target/user-registration-1.0.0.jar `
     --region $region
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Failed to upload to S3" -ForegroundColor Red
+    Write-Host " Failed to upload to S3" -ForegroundColor Red
     exit 1
 }
 
@@ -195,19 +195,19 @@ aws lambda update-function-code `
     --region $region | Out-Null
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Failed to update Lambda function" -ForegroundColor Red
+    Write-Host " Failed to update Lambda function" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "⏳ Waiting for Lambda update to complete..." -ForegroundColor Yellow
+Write-Host " Waiting for Lambda update to complete..." -ForegroundColor Yellow
 aws lambda wait function-updated `
     --function-name "$environment-user-registration" `
     --region $region
 
-Write-Host "✅ Lambda function updated" -ForegroundColor Green
+Write-Host " Lambda function updated" -ForegroundColor Green
 Write-Host ""
 
-Write-Host "⚙️  Step 6: Configure GitHub Secrets" -ForegroundColor Cyan
+Write-Host "  Step 6: Configure GitHub Secrets" -ForegroundColor Cyan
 Write-Host "-----------------------------------" -ForegroundColor Cyan
 Write-Host ""
 
@@ -223,29 +223,29 @@ if ($setupGitHub -eq "y") {
         gh secret set AWS_ACCESS_KEY_ID --body $awsAccessKey
         gh secret set AWS_SECRET_ACCESS_KEY --body $awsSecretKey
         
-        Write-Host "✅ GitHub secrets configured" -ForegroundColor Green
+        Write-Host " GitHub secrets configured" -ForegroundColor Green
     } catch {
-        Write-Host "⚠️  GitHub CLI not found" -ForegroundColor Yellow
+        Write-Host "  GitHub CLI not found" -ForegroundColor Yellow
         Write-Host "Install from: https://cli.github.com/" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "⚠️  Skipping GitHub setup" -ForegroundColor Yellow
+    Write-Host "  Skipping GitHub setup" -ForegroundColor Yellow
 }
 Write-Host ""
 
-Write-Host "📋 Step 7: Summary" -ForegroundColor Cyan
+Write-Host " Step 7: Summary" -ForegroundColor Cyan
 Write-Host "------------------" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "✅ Infrastructure deployed" -ForegroundColor Green
-Write-Host "✅ Lambda function deployed" -ForegroundColor Green
-Write-Host "✅ Application ready" -ForegroundColor Green
+Write-Host " Infrastructure deployed" -ForegroundColor Green
+Write-Host " Lambda function deployed" -ForegroundColor Green
+Write-Host " Application ready" -ForegroundColor Green
 Write-Host ""
-Write-Host "🌐 API Endpoint: $apiEndpoint" -ForegroundColor Cyan
-Write-Host "⚡ Lambda ARN: $lambdaArn" -ForegroundColor Cyan
-Write-Host "🗄️  Database: $dbEndpoint" -ForegroundColor Cyan
-Write-Host "📦 S3 Bucket: $deploymentBucket" -ForegroundColor Cyan
+Write-Host " API Endpoint: $apiEndpoint" -ForegroundColor Cyan
+Write-Host " Lambda ARN: $lambdaArn" -ForegroundColor Cyan
+Write-Host "  Database: $dbEndpoint" -ForegroundColor Cyan
+Write-Host " S3 Bucket: $deploymentBucket" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "🎯 Next Steps:" -ForegroundColor Yellow
+Write-Host " Next Steps:" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "1. Test the API (may take 5-10 seconds for cold start):"
 Write-Host "   curl $apiEndpoint/actuator/health"
@@ -261,6 +261,7 @@ Write-Host ""
 Write-Host "4. Monitor in AWS Console:"
 Write-Host "   https://console.aws.amazon.com/lambda/"
 Write-Host ""
-Write-Host "⚠️  Note: First request will have 2-5 second cold start delay" -ForegroundColor Yellow
+Write-Host "  Note: First request will have 2-5 second cold start delay" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "🎉 Setup complete!" -ForegroundColor Green
+Write-Host "Setup complete!" -ForegroundColor Green
+

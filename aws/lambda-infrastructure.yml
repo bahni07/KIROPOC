@@ -18,6 +18,10 @@ Parameters:
     NoEcho: true
     Description: RDS database password (minimum 8 characters)
     MinLength: 8
+  
+  DeploymentBucketName:
+    Type: String
+    Description: S3 bucket name for Lambda deployment (must already exist)
 
 Resources:
   # VPC Configuration
@@ -96,7 +100,7 @@ Resources:
     Properties:
       DBInstanceIdentifier: !Sub ${EnvironmentName}-lambda-db
       Engine: postgres
-      EngineVersion: '15.4'
+      EngineVersion: '16.11'
       DBInstanceClass: db.t3.micro
       AllocatedStorage: 20
       StorageType: gp2
@@ -163,7 +167,7 @@ Resources:
       Handler: com.example.userregistration.lambda.StreamLambdaHandler::handleRequest
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
-        S3Bucket: !Ref DeploymentBucket
+        S3Bucket: !Ref DeploymentBucketName
         S3Key: user-registration.jar
       MemorySize: 2048
       Timeout: 30
@@ -178,19 +182,6 @@ Resources:
         SubnetIds:
           - !Ref PrivateSubnet1
           - !Ref PrivateSubnet2
-
-  # S3 Bucket for Lambda deployment packages
-  DeploymentBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub ${EnvironmentName}-lambda-deployments-${AWS::AccountId}
-      VersioningConfiguration:
-        Status: Enabled
-      LifecycleConfiguration:
-        Rules:
-          - Id: DeleteOldVersions
-            Status: Enabled
-            NoncurrentVersionExpirationInDays: 30
 
   # API Gateway REST API
   ApiGateway:
@@ -273,7 +264,7 @@ Outputs:
 
   DeploymentBucketName:
     Description: S3 bucket for Lambda deployments
-    Value: !Ref DeploymentBucket
+    Value: !Ref DeploymentBucketName
     Export:
       Name: !Sub ${EnvironmentName}-deployment-bucket
 
