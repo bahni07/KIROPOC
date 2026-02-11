@@ -222,23 +222,43 @@ See [BRANCHING_STRATEGY.md](BRANCHING_STRATEGY.md) for complete workflow details
 
 ## Deployment Options
 
-### Option 1: Railway (Recommended - Free Tier)
+### Option 1: AWS (Production-Ready)
+
+Complete AWS deployment with ECS Fargate, RDS, and ALB.
+
+**Automated Setup:**
+```powershell
+.\scripts\setup-aws.ps1
+```
+
+**What you get:**
+- Amazon ECS Fargate (serverless containers)
+- Amazon RDS PostgreSQL (managed database)
+- Application Load Balancer (with SSL support)
+- AWS Secrets Manager (secure secrets)
+- CloudWatch Logs (monitoring)
+
+**Cost:** ~$15-25/month (free tier eligible for 12 months)
+
+See [aws/README.md](aws/README.md) for detailed instructions.
+
+### Option 2: Railway (Quick Start - Free Tier)
 
 1. Sign up at [railway.app](https://railway.app)
 2. Create new project from GitHub repo
 3. Add environment variables
 4. Deploy automatically on push
 
-### Option 2: Render
+### Option 3: Render (Simple Deployment)
 
 1. Sign up at [render.com](https://render.com)
 2. Create new Web Service from GitHub repo
 3. Add environment variables
 4. Deploy automatically on push
 
-### Option 3: AWS/GCP/Azure
+### Option 4: Other Cloud Providers
 
-Use the Docker image with any container orchestration platform (ECS, Cloud Run, AKS, etc.)
+Use the Docker image with any container orchestration platform (GCP Cloud Run, Azure AKS, etc.)
 
 ## Database Setup
 

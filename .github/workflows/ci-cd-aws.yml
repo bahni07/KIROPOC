@@ -1,0 +1,168 @@
+name: CI/CD Pipeline (AWS)
+
+on:
+  push:
+    branches: [ develop ]  # Only run tests on develop branch
+  pull_request:
+    branches: [ main ]     # Run tests on PRs to main
+  release:
+    types: [ published ]   # Deploy only on releases
+
+env:
+  JAVA_VERSION: '17'
+  MAVEN_OPTS: -Xmx1024m
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: user-registration
+  ECS_SERVICE: user-registration-service
+  ECS_CLUSTER: user-registration-cluster
+  ECS_TASK_DEFINITION: user-registration-task
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        cache: maven
+    
+    - name: Build with Maven
+      run: mvn clean compile -DskipTests
+    
+    - name: Run unit tests
+      run: mvn test
+    
+    - name: Run integration tests
+      run: mvn verify -DskipUnitTests
+      env:
+        SPRING_PROFILES_ACTIVE: test
+        EMAIL_USERNAME: test@example.com
+        EMAIL_PASSWORD: test_password
+        GOOGLE_CLIENT_ID: test_google_id
+        GOOGLE_CLIENT_SECRET: test_google_secret
+        AMAZON_CLIENT_ID: test_amazon_id
+        AMAZON_CLIENT_SECRET: test_amazon_secret
+        ENCRYPTION_KEY: dGhpc2lzYTMyYnl0ZWVuY3J5cHRpb25rZXlmb3J0ZXN0aW5n
+    
+    - name: Generate test coverage report
+      run: mvn jacoco:report
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: target/surefire-reports/
+    
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: target/site/jacoco/
+    
+    - name: Build JAR
+      if: github.event_name == 'release'
+      run: mvn clean package -DskipTests
+    
+    - name: Upload JAR artifact
+      if: github.event_name == 'release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: application-jar
+        path: target/*.jar
+
+  build-and-push-ecr:
+    name: Build and Push to ECR
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download JAR artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: application-jar
+        path: target/
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+    
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+    
+    - name: Output image URI
+      run: echo "Image pushed to ${{ steps.build-image.outputs.image }}"
+
+  deploy-ecs:
+    name: Deploy to ECS
+    needs: build-and-push-ecr
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+    
+    - name: Download task definition
+      run: |
+        aws ecs describe-task-definition \
+          --task-definition ${{ env.ECS_TASK_DEFINITION }} \
+          --query taskDefinition > task-definition.json
+    
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: task-definition.json
+        container-name: user-registration
+        image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+    
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
+    
+    - name: Deployment notification
+      run: |
+        echo "✅ Deployment successful!"
+        echo "🚀 Application deployed to ECS"
+        echo "Cluster: ${{ env.ECS_CLUSTER }}"
+        echo "Service: ${{ env.ECS_SERVICE }}"
