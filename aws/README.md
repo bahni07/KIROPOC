@@ -2,7 +2,24 @@
 
 Complete guide for deploying the User Registration Service on AWS using native services.
 
-## Architecture Overview
+## Deployment Options
+
+### Option 1: ECS Fargate (Recommended)
+- Always-on containers
+- No cold starts
+- Best for production
+- ~$36/month
+
+### Option 2: Lambda (Serverless)
+- Pay per request
+- Auto-scaling
+- Cold starts (1-5s)
+- ~$0.20-$17/month
+- See [LAMBDA_DEPLOYMENT.md](LAMBDA_DEPLOYMENT.md)
+
+**This guide covers ECS Fargate deployment.**
+
+## Architecture Overview (ECS Fargate)
 
 ```
 GitHub Actions (CI/CD)
