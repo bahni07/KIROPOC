@@ -2,9 +2,11 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ develop ]  # Only run tests on develop branch
   pull_request:
-    branches: [ main ]
+    branches: [ main ]     # Run tests on PRs to main
+  release:
+    types: [ published ]   # Deploy only on releases
 
 env:
   JAVA_VERSION: '17'
@@ -64,7 +66,7 @@ jobs:
     name: Build Docker Image
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'release'  # Only build on releases
     
     steps:
     - name: Checkout code
@@ -104,7 +106,7 @@ jobs:
     name: Deploy to Production
     needs: build-docker
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'release'  # Only deploy on releases
     
     steps:
     - name: Deploy to Railway

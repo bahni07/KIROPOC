@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "name": "Auto Git Commit on File Save",
+  "description": "Automatically commits changes when you save Java or configuration files",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.java",
+      "*.properties",
+      "*.yml",
+      "*.xml",
+      "pom.xml"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "git add . && git commit -m \"Auto-commit: Updated files\" && git push origin main"
+  }
+}

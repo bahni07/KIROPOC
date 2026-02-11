@@ -174,17 +174,51 @@ The project includes a GitHub Actions workflow that:
 1. ✅ Builds the project on every push/PR
 2. ✅ Runs unit and integration tests
 3. ✅ Generates test coverage reports
-4. ✅ Builds Docker image (on main branch)
-5. ✅ Deploys to production (on main branch)
+4. ✅ Builds Docker image (on releases)
+5. ✅ Deploys to production (on releases)
 
-### Setup GitHub Actions
+### Automated Setup (Recommended)
 
-1. Add secrets to your GitHub repository:
+Run the automated setup script to configure everything:
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\setup-pipeline.ps1
+```
+
+**Linux/Mac (Bash):**
+```bash
+chmod +x scripts/setup-pipeline.sh
+./scripts/setup-pipeline.sh
+```
+
+The script will:
+- Configure GitHub secrets (Docker Hub, deployment webhooks)
+- Set up branch protection rules
+- Create `develop` branch
+- Configure CI/CD triggers
+
+See [scripts/README.md](scripts/README.md) for detailed instructions.
+
+### Manual Setup
+
+If you prefer manual setup:
+
+1. Install [GitHub CLI](https://cli.github.com/)
+2. Add secrets to your GitHub repository:
    - `DOCKER_USERNAME`: Your Docker Hub username
    - `DOCKER_PASSWORD`: Your Docker Hub password/token
    - `RAILWAY_WEBHOOK_URL`: Railway deployment webhook (or other platform)
+3. Configure branch protection rules (see [BRANCHING_STRATEGY.md](BRANCHING_STRATEGY.md))
+4. Create `develop` branch: `git checkout -b develop && git push -u origin develop`
 
-2. Push to `main` branch to trigger deployment
+### Deployment Workflow
+
+1. Push to `develop` → Tests run automatically
+2. Create PR to `main` → Tests run, requires approval
+3. Create release → Builds Docker image and deploys
+
+See [BRANCHING_STRATEGY.md](BRANCHING_STRATEGY.md) for complete workflow details.
 
 ## Deployment Options
 
